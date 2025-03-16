@@ -1,0 +1,300 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Role {
+  description     String?
+  id              Int        @id @default(autoincrement()) @map("role_id")
+  name            String     @map("role_name") @db.VarChar(50)
+  permissionLevel Int        @map("permission_level")
+  userRoles       UserRole[]
+
+  @@map("ROLES")
+}
+
+model User {
+  activities          Activity[]
+  approvedEntries     DictionaryEntry[] @relation(name: "approvalUser")
+  auditLogs           AuditLog[]
+  comments            Comment[]
+  createdAt           DateTime          @default(now()) @map("created_at")
+  createdDefinitions  Definition[]
+  createdEntries      DictionaryEntry[] @relation(name: "createdEntries")
+  createdExamples     Example[]
+  createdRoots        Root[]
+  editedEntries       DictionaryEntry[] @relation(name: "editedEntries")
+  email               String            @unique @db.VarChar(100)
+  fullName            String?           @map("full_name") @db.VarChar(100)
+  id                  Int               @id @default(autoincrement()) @map("user_id")
+  isActive            Boolean           @default(true) @map("is_active")
+  languageProficiency String?           @map("language_proficiency") @db.VarChar(50)
+  lastLogin           DateTime?         @map("last_login")
+  level               Int               @default(1)
+  passwordHash        String            @map("password_hash") @db.VarChar(255)
+  points              Int               @default(0)
+  profileImage        String?           @map("profile_image") @db.VarChar(255)
+  reviewedSuggestions AiSuggestion[]
+  reviews             Submission[]      @relation(name: "reviews")
+  submissions         Submission[]      @relation(name: "SubmissionsOnUser")
+  uploadedDocuments   Document[]
+  userBadges          UserBadge[]
+  userRoles           UserRole[]
+  username            String            @unique @db.VarChar(50)
+
+  @@map("USERS")
+}
+
+model UserRole {
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  id         Int      @id @default(autoincrement()) @map("user_role_id")
+  role       Role     @relation(fields: [roleId], references: [id])
+  roleId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+
+  @@map("USER_ROLES")
+}
+
+model ChallengeRoot {
+  currentCount Int       @default(0) @map("current_count")
+  description  String?
+  endDate      DateTime? @map("end_date") @db.Date
+  id           Int       @id @default(autoincrement()) @map("challenge_id")
+  name         String    @db.VarChar(100)
+  roots        Root[]
+  startDate    DateTime? @map("start_date") @db.Date
+  targetCount  Int?      @map("target_count")
+
+  @@map("CHALLENGE_ROOTS")
+}
+
+model Root {
+  aiSuggestions   AiSuggestion[]
+  challenge       ChallengeRoot?    @relation(fields: [challengeId], references: [id])
+  challengeId     Int?
+  classicalOrigin String?           @map("classical_origin") @db.VarChar(100)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  creator         User?             @relation(fields: [creatorId], references: [id])
+  creatorId       Int?
+  entries         DictionaryEntry[]
+  id              Int               @id @default(autoincrement()) @map("root_id")
+  isCompleted     Boolean           @default(false) @map("is_completed")
+  notes           String?
+  rootLetters     String            @map("root_letters") @db.VarChar(50)
+  status          String            @default("pending") @db.VarChar(20)
+  transliteration String?           @db.VarChar(100)
+  updatedAt       DateTime          @default(now()) @map("updated_at")
+
+  @@map("ROOTS")
+}
+
+model DictionaryEntry {
+  activities      Activity[]
+  aiSuggestions   AiSuggestion[]
+  approvalDate    DateTime?       @map("approval_date")
+  approvalUser    User?           @relation(name: "approvalUser", fields: [approvalUserId], references: [id])
+  approvalUserId  Int?
+  audioFilePath   String?         @map("audio_file_path") @db.VarChar(255)
+  comments        Comment[]
+  createdAt       DateTime        @default(now()) @map("created_at")
+  creator         User?           @relation(name: "createdEntries", fields: [creatorId], references: [id])
+  creatorId       Int?
+  definitions     Definition[]
+  examples        Example[]
+  extractedWords  ExtractedWord[]
+  id              Int             @id @default(autoincrement()) @map("entry_id")
+  isChallengeWord Boolean         @default(false) @map("is_challenge_word")
+  lastEditor      User?           @relation(name: "editedEntries", fields: [lastEditorId], references: [id])
+  lastEditorId    Int?
+  originType      String?         @map("origin_type") @db.VarChar(50)
+  partOfSpeech    String?         @map("part_of_speech") @db.VarChar(20)
+  root            Root?           @relation(fields: [rootId], references: [id])
+  rootId          Int?
+  status          String          @default("pending") @db.VarChar(20)
+  submissions     Submission[]
+  transliteration String?         @db.VarChar(100)
+  updatedAt       DateTime        @default(now()) @map("updated_at")
+  verbForm        String?         @map("verb_form") @db.VarChar(20)
+  word            String          @db.VarChar(100)
+
+  @@map("DICTIONARY_ENTRIES")
+}
+
+model Definition {
+  createdAt      DateTime        @default(now()) @map("created_at")
+  creator        User?           @relation(fields: [creatorId], references: [id])
+  creatorId      Int?
+  definitionText String          @map("definition_text")
+  definitionType String?         @map("definition_type") @db.VarChar(20)
+  entry          DictionaryEntry @relation(fields: [entryId], references: [id])
+  entryId        Int
+  id             Int             @id @default(autoincrement()) @map("definition_id")
+  language       String          @db.VarChar(20)
+  orderNumber    Int             @default(1) @map("order_number")
+  updatedAt      DateTime        @default(now()) @map("updated_at")
+
+  @@map("DEFINITIONS")
+}
+
+model Example {
+  contextNotes String?         @map("context_notes")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  creator      User?           @relation(fields: [creatorId], references: [id])
+  creatorId    Int?
+  entry        DictionaryEntry @relation(fields: [entryId], references: [id])
+  entryId      Int
+  exampleText  String          @map("example_text")
+  id           Int             @id @default(autoincrement()) @map("example_id")
+  translation  String?
+
+  @@map("EXAMPLES")
+}
+
+model Submission {
+  entry          DictionaryEntry? @relation(fields: [entryId], references: [id])
+  entryId        Int?
+  feedback       String?
+  id             Int              @id @default(autoincrement()) @map("submission_id")
+  notes          String?
+  reviewedAt     DateTime?        @map("reviewed_at")
+  reviewer       User?            @relation(name: "reviews", fields: [reviewedBy], references: [id])
+  reviewedBy     Int?
+  status         String           @default("pending") @db.VarChar(20)
+  submissionType String?          @map("submission_type") @db.VarChar(50)
+  submittedAt    DateTime         @default(now()) @map("submitted_at")
+  user           User             @relation(name: "SubmissionsOnUser", fields: [userId], references: [id])
+  userId         Int
+
+  @@map("SUBMISSIONS")
+}
+
+model Comment {
+  commentText     String          @map("comment_text")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  entry           DictionaryEntry @relation(fields: [entryId], references: [id])
+  entryId         Int
+  id              Int             @id @default(autoincrement()) @map("comment_id")
+  parentComment   Comment?        @relation(name: "parentComment", fields: [parentCommentId], references: [id])
+  parentCommentId Int?
+  replies         Comment[]       @relation(name: "parentComment")
+  user            User            @relation(fields: [userId], references: [id])
+  userId          Int
+
+  @@map("COMMENTS")
+}
+
+model Badge {
+  badgeName        String      @map("badge_name") @db.VarChar(50)
+  description      String?
+  iconPath         String?     @map("icon_path") @db.VarChar(255)
+  id               Int         @id @default(autoincrement()) @map("badge_id")
+  requiredPoints   Int         @default(0) @map("required_points")
+  requirementCount Int         @default(0) @map("requirement_count")
+  requirementType  String?     @map("requirement_type") @db.VarChar(50)
+  userBadges       UserBadge[]
+
+  @@map("BADGES")
+}
+
+model UserBadge {
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  badgeId  Int
+  earnedAt DateTime @default(now()) @map("earned_at")
+  id       Int      @id @default(autoincrement()) @map("user_badge_id")
+  user     User     @relation(fields: [userId], references: [id])
+  userId   Int
+
+  @@map("USER_BADGES")
+}
+
+model Activity {
+  activityDate DateTime         @default(now()) @map("activity_date")
+  activityType String           @map("activity_type") @db.VarChar(50)
+  description  String?
+  entry        DictionaryEntry? @relation(fields: [entryId], references: [id])
+  entryId      Int?
+  id           Int              @id @default(autoincrement()) @map("activity_id")
+  pointsEarned Int              @default(0) @map("points_earned")
+  user         User             @relation(fields: [userId], references: [id])
+  userId       Int
+
+  @@map("ACTIVITIES")
+}
+
+model Document {
+  documentName     String          @map("document_name") @db.VarChar(255)
+  documentType     String?         @map("document_type") @db.VarChar(50)
+  extractedWords   ExtractedWord[]
+  filePath         String          @map("file_path") @db.VarChar(255)
+  id               Int             @id @default(autoincrement()) @map("document_id")
+  language         String?         @db.VarChar(20)
+  newWordCount     Int             @default(0) @map("new_word_count")
+  processingStatus String          @default("pending") @map("processing_status") @db.VarChar(20)
+  uploadedAt       DateTime        @default(now()) @map("uploaded_at")
+  uploader         User?           @relation(fields: [uploaderId], references: [id])
+  uploaderId       Int?
+  wordCount        Int             @default(0) @map("word_count")
+
+  @@map("DOCUMENTS")
+}
+
+model ExtractedWord {
+  context     String?
+  document    Document         @relation(fields: [documentId], references: [id])
+  documentId  Int
+  entry       DictionaryEntry? @relation(fields: [entryId], references: [id])
+  entryId     Int?
+  id          Int              @id @default(autoincrement()) @map("extracted_word_id")
+  isNew       Boolean          @default(true) @map("is_new")
+  isProcessed Boolean          @default(false) @map("is_processed")
+  word        String           @db.VarChar(100)
+
+  @@map("EXTRACTED_WORDS")
+}
+
+model AiSuggestion {
+  createdAt           DateTime         @default(now()) @map("created_at")
+  entry               DictionaryEntry? @relation(fields: [entryId], references: [id])
+  entryId             Int?
+  examples            String?
+  formType            String?          @map("form_type") @db.VarChar(50)
+  id                  Int              @id @default(autoincrement()) @map("suggestion_id")
+  reviewedAt          DateTime?        @map("reviewed_at")
+  reviewer            User?            @relation(fields: [reviewedBy], references: [id])
+  reviewedBy          Int?
+  root                Root?            @relation(fields: [rootId], references: [id])
+  rootId              Int?
+  status              String           @default("pending") @db.VarChar(20)
+  suggestedDefinition String?          @map("suggested_definition")
+  suggestedWord       String           @map("suggested_word") @db.VarChar(100)
+
+  @@map("AI_SUGGESTIONS")
+}
+
+model Setting {
+  description  String?
+  id           Int     @id @default(autoincrement()) @map("setting_id")
+  settingGroup String? @map("setting_group") @db.VarChar(50)
+  settingName  String  @unique @map("setting_name") @db.VarChar(100)
+  settingValue String? @map("setting_value")
+
+  @@map("SETTINGS")
+}
+
+model AuditLog {
+  action     String   @db.VarChar(50)
+  actionTime DateTime @default(now()) @map("action_time")
+  details    String?
+  entityId   Int?     @map("entity_id")
+  entityType String   @map("entity_type") @db.VarChar(50)
+  id         Int      @id @default(autoincrement()) @map("log_id")
+  user       User?    @relation(fields: [userId], references: [id])
+  userId     Int?
+
+  @@map("AUDIT_LOGS")
+}
